@@ -1,0 +1,98 @@
+import json
+
+def lambda_handler(event, context):
+    """
+    Matrix 2x2 Evaluation Lambda Function
+
+    Input:
+        matrix = [[a,b],[c,d]]
+
+    Calculates:
+        - Determinant
+        - Trace
+        - Inverse (if determinant != 0)
+    """
+
+    try:
+        # Retrieve matrix input from the Lambda event
+        matrix = event['matrix']
+
+        # Verify that the matrix is exactly 2 rows by 2 columns
+        if len(matrix) != 2 or len(matrix[0]) != 2 or len(matrix[1]) != 2:
+            raise ValueError("Matrix must be 2x2")
+
+        # Extract matrix elements and convert them to floating-point numbers
+        a = float(matrix[0][0])
+        b = float(matrix[0][1])
+        c = float(matrix[1][0])
+        d = float(matrix[1][1])
+
+    # Handle missing matrix input
+    except KeyError:
+        return {
+            'statusCode': 400,
+            'body': json.dumps({'error': 'Missing required parameter: matrix'})
+        }
+
+    # Handle invalid matrix values or formatting
+    except (ValueError, TypeError) as e:
+        return {
+            'statusCode': 400,
+            'body': json.dumps({'error': str(e)})
+        }
+
+    # Calculate determinant and trace of the matrix
+    determinant = a * d - b * c
+    trace = a + d
+
+    # Store the basic results
+    result = {
+        'function': 'Matrix 2x2 Evaluation',
+        'matrix': matrix,
+        'determinant': round(determinant, 6),
+        'trace': round(trace, 6)
+    }
+
+    # Calculate inverse only if the matrix is invertible
+    if determinant != 0:
+
+        # Scaling factor used in inverse matrix calculation
+        scale = 1 / determinant
+
+        # Compute inverse matrix
+        inverse = [
+            [round(d * scale, 6), round(-b * scale, 6)],
+            [round(-c * scale, 6), round(a * scale, 6)]
+        ]
+
+        result['inverse'] = inverse
+
+    else:
+        # Singular matrices have no inverse
+        result['inverse'] = None
+        result['note'] = 'Matrix is singular; inverse does not exist.'
+
+    # Return successful response
+    return {
+        'statusCode': 200,
+        'body': json.dumps(result)
+    }
+
+
+# Local testing section
+# This code runs only when executing the script directly
+if __name__ == '__main__':
+
+    # Three test matrices
+    test_cases = [
+        {'matrix': [[4, 7], [2, 6]]},
+        {'matrix': [[1, 2], [3, 4]]},
+        {'matrix': [[2, 4], [1, 2]]}
+    ]
+
+    # Execute each test case and display results
+    for i, tc in enumerate(test_cases, 1):
+        result = lambda_handler(tc, None)
+
+        print(f"\nTest {i}")
+        print(json.loads(result['body']))  
